@@ -1,0 +1,40 @@
+# OS / IDEs
+.DS_Store
+.vscode/
+.idea/
+.vs/
+*.user
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build & CMake
+build/
+out/
+bin/
+obj/
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+compile_commands.json
+
+# MSVC / Windows Artifacts
+*.obj
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.suo
+*.ncb
+*.idb
+
+# Vcpkg / Conan
+vcpkg_installed/
+.conan/

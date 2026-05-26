@@ -1,0 +1,45 @@
+# Modern C++ Features & Compile-Time Evaluation
+
+This document dictates the strict use of modern C++ (C++20/C++23) language features. The AI must prioritize compile-time evaluation, robust type safety, and zero-overhead abstractions. Legacy C++ paradigms (macros, raw templates without concepts, SFINAE) are strictly prohibited.
+
+## 1. Compile-Time Evaluation (The `const` Family)
+Maximize the compiler's capability to enforce correctness and execute logic at compile-time to reduce runtime overhead to absolute zero.
+* **`const`:** Default state for any variable that does not mutate after initialization.
+* **`constexpr`:** Use for variables, functions, and constructors that *can* and *should* be evaluated at compile-time. Prefer `constexpr` algorithms over runtime execution whenever the input domain is known statically.
+* **`consteval` (C++20):** Mandatory for functions that *must* execute at compile-time (immediate functions). Use this for compile-time string hashing, static parsing, or metaprogramming generation.
+* **`constinit` (C++20):** Use for static or thread-local variables to guarantee static initialization and completely eliminate the Static Initialization Order Fiasco.
+
+## 2. Type Deduction & Auto
+Follow a disciplined "Almost Always Auto" (AAA) approach, prioritizing readability without sacrificing strict memory semantics.
+* **`auto`:** Use to prevent repeating lengthy type names, especially for iterators, ranges, and smart pointers (e.g., `auto ptr = std::make_unique<ComplexType>();`).
+* **Strict Qualifiers:** Naked `auto` creates copies. You must explicitly qualify references to reflect your intent:
+  * `const auto&` for read-only observation.
+  * `auto&` for mutable observation.
+  * `auto&&` for forwarding references in template contexts or range-based loops over proxy objects.
+
+## 3. Metaprogramming & Constraints
+* **Concepts (C++20):** Mandatory for all template constraints. Replace generic `typename T` with explicit Concepts (e.g., `std::integral auto`, `std::ranges::range auto`) to provide immediate, readable compiler errors. Do not use legacy `std::enable_if` (SFINAE) under any circumstances.
+* **`if constexpr` (C++17):** Use for static branching inside templates. Discard invalid branches at compile-time to simplify logic and avoid compilation errors on unused branches.
+
+## 4. Object Orientation & "Deducing this" (C++23)
+* **Explicit Object Parameters:** In C++23, utilize Deducing `this` to dramatically simplify class design and template hierarchies.
+* **Eliminate Overloads:** Replace duplicated `const` and non-`const` member functions with a single template method taking `this` explicitly:
+  `template<typename Self> auto&& getValue(this Self&& self) { return std::forward<Self>(self).value; }`
+* **CRTP Simplification:** Use Deducing `this` to implement the Curiously Recurring Template Pattern (CRTP) without needing the base class to be a template of the derived class, removing massive amounts of boilerplate.
+
+## 5. Type Punning & Casting
+* **`std::bit_cast` (C++20):** When converting between different types of the same size (type punning) where both are trivially copyable, you must use `std::bit_cast<DestTy>(source)`. It is safe, `constexpr` friendly, and avoids Undefined Behavior inherent to `reinterpret_cast`.
+* **Static Assertions:** In C++23, use `static_assert(false, "Error");` directly inside `if constexpr` blocks. Do not implement or use legacy `AlwaysFalse` template hacks.
+
+## 6. Formatting & I/O Strictness (The `<iostream>` Ban)
+* **Strictly Forbid `<iostream>`:** The inclusion of `<iostream>` and the use of `std::cout`, `std::cin`, or `std::endl` are absolutely prohibited. They severely bloat the compiled binary size due to locale overhead and drastically degrade runtime execution performance.
+* **Modern Formatting:** For string formatting and output, exclusively use C++20 `<format>` (e.g., `std::format`) or C++23 `<print>` (e.g., `std::println`).
+* **Production Logging:** For runtime or diagnostic logging, never use standard streams. Rely on raw memory buffers, memory-mapped files, or specialized fast asynchronous loggers designed for low-latency environments.
+
+---
+
+## Code Generation Directives for AI Models
+
+1. **No Implementation Comments:** `.cpp` files must contain zero comments. The intent must be self-evident through the use of standard modern paradigms (e.g., `if constexpr`, `consteval`).
+2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
+3. **Purity:** Methods that do not modify state must be explicitly marked `const`. Check return values rigorously using `[[nodiscard]]`.
