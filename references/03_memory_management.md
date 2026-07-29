@@ -70,6 +70,12 @@ Optimizing resource transfers without expensive deep copies.
 * **Polymorphic Memory Resources (C++17):** For containers inside hot loops, you must utilize `std::pmr::vector`, `std::pmr::string`, or other `std::pmr` counterparts.
 * **Stack-Backed Arenas:** You must bind these PMR containers to a `std::pmr::monotonic_buffer_resource` backed by a stack-allocated `std::array` buffer (or a pre-allocated heap arena). This guarantees mathematically zero heap allocations and absolute CPU cache locality during the loop's execution.
 
+## 8. Stable-Pointer Pooling (`std::hive`, C++26)
+* **Architectural Rule:** When a design needs to insert and erase elements frequently from a large pool while keeping existing pointers/references/iterators to *other* elements stable across those operations (object pools, entity-component systems, particle systems), reach for `std::hive` before hand-rolling a bucket/free-list container.
+* **Modern C++ Implementation:** `std::hive<T>` provides amortized O(1) insertion and erasure without relocating surviving elements, using an internal skipfield to skip erased slots during iteration. Prefer it over `std::vector<std::optional<T>>` (wastes space and still risks reference invalidation on growth) or a hand-written free-list allocator.
+* **Gating:** `std::hive` is a C++26 addition; confirm toolchain support (`__cpp_lib_hive` via `<version>`) before emitting it, and fall back to a documented `std::deque`-backed free-list pool otherwise.
+* **Reinvention Check:** A custom "stable object pool" class with a manual free-list and skip-erased-slots iteration is exactly what `std::hive` replaces — flag it during an Over-Engineering Audit ([18_over_engineering_audit.md](18_over_engineering_audit.md) §3) once C++26 is available.
+
 ---
 
 ## Code Generation Directives for AI Models

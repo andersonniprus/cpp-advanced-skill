@@ -20,6 +20,7 @@ Follow a disciplined "Almost Always Auto" (AAA) approach, prioritizing readabili
 ## 3. Metaprogramming & Constraints
 * **Concepts (C++20):** Mandatory for all template constraints. Replace generic `typename T` with explicit Concepts (e.g., `std::integral auto`, `std::ranges::range auto`) to provide immediate, readable compiler errors. Do not use legacy `std::enable_if` (SFINAE) under any circumstances.
 * **`if constexpr` (C++17):** Use for static branching inside templates. Discard invalid branches at compile-time to simplify logic and avoid compilation errors on unused branches.
+* **Pack Indexing (C++26):** Use `pack...[index]` to access a single element of a template or function parameter pack directly (`Ts...[0]`, `args...[N]`). This replaces recursive template metaprogramming or `std::index_sequence`/`std::tuple_element` gymnastics that existed solely to extract the Nth pack element. Gate behind confirmed C++26 toolchain support; fall back to `std::tuple_element_t<N, std::tuple<Ts...>>` otherwise.
 
 ## 4. Object Orientation & "Deducing this" (C++23)
 * **Explicit Object Parameters:** In C++23, utilize Deducing `this` to dramatically simplify class design and template hierarchies.
@@ -29,6 +30,9 @@ Follow a disciplined "Almost Always Auto" (AAA) approach, prioritizing readabili
 
 ## 5. Type Punning & Casting
 * **`std::bit_cast` (C++20):** When converting between different types of the same size (type punning) where both are trivially copyable, you must use `std::bit_cast<DestTy>(source)`. It is safe, `constexpr` friendly, and avoids Undefined Behavior inherent to `reinterpret_cast`.
+* **Argument Contract:** `std::bit_cast` requires `sizeof(To) == sizeof(From)` and both `To` and `From` trivially copyable; the compiler enforces this via `static_assert`-equivalent constraints, so a failing call is a compile error, not latent UB. Unlike `reinterpret_cast`, `To` need not be default-constructible — the destination object is produced directly from the source bit pattern.
+* **Canonical Uses:** Float/integer bit manipulation (`std::bit_cast<std::uint32_t>(floatValue)` instead of a `union` or `memcpy`), and network/binary-protocol field extraction from a `std::array<std::byte, N>` into a POD struct. Pair with `std::byteswap` (C++23) when the source bytes are a different endianness than the host: `std::bit_cast<std::uint32_t>(bytes)` then `std::byteswap(value)` if crossing endianness, never a hand-rolled shift-and-mask sequence.
+* **What `bit_cast` Does Not License:** Producing a pointer/reference value via `bit_cast` and then dereferencing it as an unrelated type is still governed by strict aliasing — `bit_cast` legalizes the *value copy*, not arbitrary reinterpretation through the resulting pointer. Never use it to punch through a class hierarchy or reinterpret an opaque handle as a different pointer type; use it strictly for value-to-value bit reinterpretation between trivially copyable types.
 * **Static Assertions:** In C++23, use `static_assert(false, "Error");` directly inside `if constexpr` blocks. Do not implement or use legacy `AlwaysFalse` template hacks.
 
 ## 6. Formatting & I/O Strictness (The `<iostream>` Ban)

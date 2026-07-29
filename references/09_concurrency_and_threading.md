@@ -23,7 +23,8 @@ This document dictates the architectural mandates for concurrent programming, th
 * **Modern Primitives (C++20):** Utilize modern synchronization primitives instead of building custom spinlocks. Use `std::counting_semaphore`, `std::latch`, and `std::barrier` for coordinating complex multi-stage parallel pipelines.
 
 ## 5. Asynchronous Tasks
-* **`std::async` & Futures:** For one-off background calculations returning a value, prefer `std::async` with the `std::launch::async` policy over spawning a manual thread. Handle the result using `std::future`. 
+* **`std::async` & Futures:** For one-off background calculations returning a value, prefer `std::async` with the `std::launch::async` policy over spawning a manual thread. Handle the result using `std::future`.
+* **Composed Pipelines (C++26):** For a *multi-stage* async pipeline (dependent steps, fan-out/fan-in across schedulers) rather than a single one-off calculation, prefer `std::execution` senders/receivers over chained `std::async`/`std::future` continuations — see [20_senders_receivers_cpp26.md](20_senders_receivers_cpp26.md) for structured-concurrency guarantees that eliminate a whole class of lifetime races.
 
 ---
 

@@ -18,7 +18,15 @@ This document dictates the strict use of the Standard Template Library (STL) in 
   * *Good:* `std::ranges::sort(users, std::less<>{}, &User::id);`
 * **Lambdas:** When a custom callable is strictly necessary, use concise lambdas. Prefer explicit captures (`[this]`, `[&data]`) over implicit catch-alls (`[&]`, `[=]`). Keep lambda bodies extremely short; if they exceed 3 lines, extract them into a private `constexpr` method.
 
-## 4. Compile-Time Algorithms
+## 4. C++23 Range-Adaptor Family
+* **Mandate the C++23 Adaptors Over Manual Index Loops:** `std::views::zip`, `std::views::enumerate`, `std::views::adjacent`/`adjacent_transform`, `std::views::chunk`/`chunk_by`, `std::views::slide`, `std::views::cartesian_product`, and `std::views::join_with` are all lazy, zero-allocation, and composable with the pipe operator exactly like the C++20 adaptors. A manual index-based `for` loop correlating two or more containers, or windowing a single container, is a defect once these exist.
+  * `std::views::enumerate` replaces a hand-maintained index counter: `for (auto&& [index, value] : container | std::views::enumerate)`.
+  * `std::views::zip` replaces parallel-iterator loops over multiple containers of equal length.
+  * `std::views::adjacent<N>` (and `adjacent_transform<N>`) replace manual sliding-window index arithmetic (`v[i]`, `v[i+1]`) for windowed comparisons/reductions.
+  * `std::views::chunk`/`chunk_by` replace manual batch-splitting loops.
+* **`std::ranges::to<Container>()` (C++23):** Materializes a view pipeline into a concrete container in a single expression: `auto result = data | std::views::filter(isValid) | std::ranges::to<std::vector>();`. Never write a manual `std::copy`/push_back loop to collect a view's results — `ranges::to` is the direct replacement.
+
+## 5. Compile-Time Algorithms
 * **`constexpr` STL:** In C++20 and above, most STL algorithms and containers (`std::vector`, `std::string`) are `constexpr` friendly. If the input data is known at compile-time, you must wrap the algorithmic pipeline in a `constexpr` or `consteval` function to execute the logic entirely during compilation.
 
 ---
