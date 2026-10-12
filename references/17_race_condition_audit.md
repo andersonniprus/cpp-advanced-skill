@@ -26,6 +26,7 @@ Assume any state reachable from more than one thread is racy until a specific sy
 * **`.detach()`:** Forbidden per [09_concurrency_and_threading.md](09_concurrency_and_threading.md) — flag any occurrence; it makes lifetime races unrecoverable by construction.
 * **Missing `stop_token` Checks:** A `std::jthread` loop that does not periodically check `stop_requested()` can race the destructor's implicit `request_stop()`/`join()` by continuing to touch state the owner is already tearing down.
 * **Thread Pool Task Capturing Non-Owning References:** A task enqueued to a pool that captures a raw pointer/reference to an object whose lifetime is not provably longer than "until the pool executes this task."
+* **Lock-free retire without reclamation:** A pointer published to other threads is `delete`d with no hazard pointer and no RCU grace period ([09_concurrency_and_threading.md](09_concurrency_and_threading.md) §5). Name `std::hazard_pointer` or `std::rcu` only when the path is already lock-free and the toolchain has the header. Otherwise the fix is a mutex.
 
 ## 5. TOCTOU (Time-Of-Check to Time-Of-Use)
 * **Check-Then-Act on Shared State Without Holding the Lock Across Both:** E.g. `if (!queue.empty()) { queue.front(); }` where another thread can drain the queue between the check and the use — must hold a single lock (or use a lock-free structure designed for exactly this) across both steps.

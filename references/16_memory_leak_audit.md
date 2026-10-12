@@ -23,6 +23,8 @@ Assume every heap allocation, OS handle, and cyclic reference is guilty until pr
 * **Reference/Pointer to a Temporary:** A function returning `const T&` to a local, or a lambda capturing `[&]` a stack variable that outlives the lambda's own scope (notably `std::jthread`/`std::async` lambdas capturing stack references by reference).
 * **Iterator/Reference Invalidation:** References, pointers, or iterators into a `std::vector`/`std::unordered_map` retained across a mutating operation (`push_back`, `erase`, `insert`) that can reallocate or rehash.
 * **`std::string_view`/`std::span` Over a Freed Buffer:** A view or span kept alive past the lifetime of the owning `std::string`/container it was constructed from.
+* **`function_ref` or `optional<T&>` outliving the referent:** A C++26 non-owning callable or reference-optional stored past the object it names. Same class of bug as a dangling `T*`.
+* **Erroneous uninitialized read:** A read of an uninitialized automatic variable. C++26 may label this erroneous behavior rather than classic UB ([08_security_and_production.md](08_security_and_production.md) §0). Still report it. The fix is initialization, not a note that the behavior "is only erroneous".
 
 ## 5. Severity Classification
 | Severity | Criteria |

@@ -25,15 +25,8 @@ This document dictates the architectural mandates for using C++26 language Contr
 * **Public/Untrusted Boundaries:** Values crossing a security or public-API boundary must still be validated with the skill's mandatory early-return guard clauses ([01_core_guidelines.md](01_core_guidelines.md)) and `std::expected` error propagation. Never gate an externally-facing security check solely behind a `pre` contract — an *ignore*-level release build would silently drop the check.
 * **Internal Invariants:** Reserve `pre`/`post`/`contract_assert` for invariants that exist to catch programmer error during development (documented preconditions between trusted internal callers), where being compiled out in release is an acceptable, intentional tradeoff.
 * **Documentation Value:** Even when checking is disabled, a contract on a signature is executable documentation read by both humans and the compiler's diagnostics — prefer it over a Doxygen `@pre`/`@post` comment that can silently drift from the actual behavior.
+* **`post` is a predicate:** A `post` condition must not mutate observable state. It reads the return value and `const` object state.
 
 ## 4. Violation Handling
 * **Default Handler:** An unhandled contract violation invokes the implementation-defined default violation handler, which is not guaranteed to terminate on every evaluation semantic.
 * **Security-Hardened Builds:** In builds following [08_security_and_production.md](08_security_and_production.md), pair `enforce` semantics with a custom violation handler that fails closed (logs and terminates) rather than relying on the default handler's unspecified behavior.
-
----
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. `pre`/`post` conditions are the specification; a `contract_assert` statement must be self-evident from its condition and the surrounding descriptive names.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** A `post(result: …)` condition must never mutate observable state — it is a pure predicate over the return value and, where applicable, `const` object state.

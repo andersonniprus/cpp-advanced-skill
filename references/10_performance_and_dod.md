@@ -17,12 +17,12 @@ This document dictates the architectural rules for writing mechanically sympathe
 
 ## 4. Numerics on `mdspan` (`<linalg>`, C++26)
 * **BLAS-Like Operations Over Hand-Rolled Loops:** For matrix/vector-heavy code (transforms, physics, ML inference glue) built on `std::mdspan` (C++23), use the C++26 `<linalg>` algorithms (e.g. `std::linalg::matrix_product`, `add`, `scale`) instead of hand-written nested loops — they map to vendor-tuned BLAS backends where available and are exception- and bounds-contract-consistent with the rest of the standard library.
-* **Gating:** `<linalg>` is a C++26 addition layered on `std::mdspan`; confirm toolchain support before emitting it, and fall back to a manually written, unit-tested loop over `std::mdspan` otherwise.
+* **Slices:** Take a rank-reducing or strided window with `std::submdspan` instead of re-wrapping `data() + offset` in a fresh `mdspan`. Alignment-sensitive kernels use the aligned accessor rather than a raw `__assume_aligned` cast.
+* **Gating:** `<linalg>` and `submdspan` are C++26, layered on `std::mdspan`. Confirm toolchain support before emitting them, and fall back to a manually written, unit-tested loop over `std::mdspan` otherwise.
 
----
+## 5. Data-parallel types (`std::simd`, C++26)
 
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. Cache alignment and branchless logic must be evident through clean structure and descriptive variable names.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Methods must avoid side effects. Use `[[nodiscard]]` aggressively to ensure computations are consumed.
+* **Default vector path:** Element-wise arithmetic on a fixed-width lane pack uses `std::simd<T>` (`<simd>`), not a hand-written AVX2 intrinsic. The type is portable; the compiler maps it to the host ISA.
+* **Intrinsics stay for:** A shuffle, mask, or gather the `simd` ABI cannot express, or a scan whose memory is unaligned and page-guarded ([13_memory_scanning.md](13_memory_scanning.md)). Say which operation the portable type cannot do before emitting `<immintrin.h>`.
+* **Gating:** Confirm `<simd>` support. Fallback: a scalar loop and let the compiler autovectorize, or an intrinsic only on the profiled hot path.
+* **Saturation:** Overflow-checked add/sub/mul in parsers and scans uses `std::add_sat`, `std::sub_sat`, and `std::mul_sat` (`<sat>` / `<numeric>` as provided). Do not open-code the widen-then-clamp sequence. Gate them; fallback is a widening operation into the next integer rank with an explicit clamp.

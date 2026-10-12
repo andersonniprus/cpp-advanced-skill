@@ -68,9 +68,3 @@ Ensures that a class has only one instance, while providing a global access poin
     `Singleton& operator=(Singleton&&) = delete;`
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **Header Files (`.hpp`):** May include a single `@brief` above the class declaration specifying the pattern being used.
-2. **Implementation Files (`.cpp`):** Must contain exactly **zero comments**. The architecture, method chaining, variable names, and explicit use of `std::move` and `std::make_unique` must be entirely self-documenting.
-3. **Immutability:** Mark all factory creation methods as `const` unless the factory maintains internal caching or object pooling state.

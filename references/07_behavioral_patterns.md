@@ -104,9 +104,3 @@ Separates algorithms from the objects on which they operate.
   * Apply the visitor using `std::visit(Visitor{}, variantElement)`. This provides compile-time exhaustiveness checking and better cache locality.
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. The intent must be self-evident through the use of standard modern paradigms (e.g., `std::visit`, `std::weak_ptr::lock`).
-2. **English Exclusivity:** All code constructs must be in English.
-3. **Purity:** Methods that do not modify state must be explicitly marked `const`. Check return values rigorously using `[[nodiscard]]`.

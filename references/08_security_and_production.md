@@ -2,6 +2,14 @@
 
 This document dictates the architectural mandates for securing C++ binaries in the Windows Environment (Win32/NTAPI) against reverse engineering, memory exploitation, and dynamic analysis. The AI must prioritize hostile-environment resilience, stealth, and strict API discipline.
 
+## 0. Erroneous behavior (C++26)
+
+C++26 classifies some reads of uninitialized automatic storage as **erroneous behavior**, not as classic undefined behavior the optimizer may delete. That does not make the read safe, defined, or a usable oracle.
+
+* Still initialize every object before a read. Do not recommend an uninitialized read as a side channel, a "harmless" leak, or something the optimizer is required to preserve.
+* A sanitizer report of an uninitialized read stays a defect. The fix is initialization or a narrower lifetime, not a comment that "it is only erroneous now".
+* This section does not change W^X, lifetime, or aliasing rules. Those remain undefined when the standard says they are.
+
 ## 1. Windows Memory Safety & W^X Enforcement
 * **Strict W^X (Write XOR Execute):** You are strictly forbidden from allocating or modifying memory with the `PAGE_EXECUTE_READWRITE` protection flag. Memory must be either writable OR executable, never both simultaneously. Use `VirtualProtect` or `NtProtectVirtualMemory` to transition memory from `PAGE_READWRITE` to `PAGE_EXECUTE_READ` only after all writes are finalized.
 * **Sensitive Data Erasure:** Cryptographic keys, authentication tokens, and user credentials must not linger in RAM. You must explicitly zero out sensitive memory before the object's destruction using `RtlSecureZeroMemory` to prevent the MSVC compiler's dead-store elimination pass (`/O2`) from optimizing the erasure away.
@@ -22,9 +30,3 @@ This document dictates the architectural mandates for securing C++ binaries in t
 * **Direct Syscalls (When Applicable):** To bypass user-mode hooks placed by EDRs in `ntdll.dll`, prefer generating or utilizing direct syscall stubs for critical NTAPI functions instead of calling the exported functions.
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. Obfuscation techniques or WinAPI security boundaries must be self-evident through their function names and structural isolation.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Methods that validate security states but do not mutate them must be explicitly marked `const`. Security check return values (`NTSTATUS`, `HRESULT`, `std::expected`) must be rigorously enforced using `[[nodiscard]]`.

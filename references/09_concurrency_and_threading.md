@@ -22,14 +22,17 @@ This document dictates the architectural mandates for concurrent programming, th
 * **Memory Ordering:** Default to `std::memory_order_seq_cst` (Sequential Consistency) for atomic operations. Only downgrade to `std::memory_order_acquire` and `std::memory_order_release` if profiled performance metrics strictly demand it, and the lock-free semantics are flawlessly architected.
 * **Modern Primitives (C++20):** Utilize modern synchronization primitives instead of building custom spinlocks. Use `std::counting_semaphore`, `std::latch`, and `std::barrier` for coordinating complex multi-stage parallel pipelines.
 
-## 5. Asynchronous Tasks
+## 5. Lock-free reclamation (C++26)
+
+A retired object must not be deleted while another thread still holds a pointer to it. Reference counting is the wrong tool when the read path must stay lock-free.
+
+* **`std::hazard_pointer` (`<hazard_pointer>`):** A reader publishes the address it is about to use. A writer retires the object; reclamation waits until no hazard pointer protects it. Use for a singly linked structure with frequent readers and rare writers (lock-free stack, hash table bucket).
+* **`std::rcu` (`<rcu>`):** Read-copy-update. Readers enter a read-side critical section; writers publish a new version and wait until pre-existing readers have finished before freeing the old one. Use when reads dominate and updates replace a whole snapshot.
+* Both are C++26 and easy to misuse. Gate them. Fallback: `std::mutex` or `std::shared_mutex`. Do not hand-roll a hazard-pointer domain.
+* A race audit that finds "delete while another thread may still load this pointer" should name hazard pointers or RCU only when the hot path is already lock-free and the toolchain has the header. Otherwise name a mutex.
+
+## 6. Asynchronous Tasks
 * **`std::async` & Futures:** For one-off background calculations returning a value, prefer `std::async` with the `std::launch::async` policy over spawning a manual thread. Handle the result using `std::future`.
 * **Composed Pipelines (C++26):** For a *multi-stage* async pipeline (dependent steps, fan-out/fan-in across schedulers) rather than a single one-off calculation, prefer `std::execution` senders/receivers over chained `std::async`/`std::future` continuations — see [20_senders_receivers_cpp26.md](20_senders_receivers_cpp26.md) for structured-concurrency guarantees that eliminate a whole class of lifetime races.
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. Synchronization boundaries and thread management must be self-evident through proper RAII scoping and descriptive lambda names.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Thread-safe reader methods must be marked `const`. Return values from asynchronous tasks (`std::future`, `std::expected`) must be rigorously checked using `[[nodiscard]]`.

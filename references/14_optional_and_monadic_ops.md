@@ -35,14 +35,22 @@ auto result = parseRequest(raw)
 * **`value()` / `error()`:** `value()` throws `std::bad_expected_access<E>` if the object holds an error; `error()` is UB if the object holds a value. Guard with `has_value()`/`operator bool` first, or prefer `value_or`/monadic chaining.
 * **Return Discipline:** A function returning `std::expected<T, E>` must be constructed with `std::unexpected{errorValue}` on the failure path — never throw to signal the same failure the return type already models.
 
-## 6. When *Not* to Chain
+## 6. `std::optional<T&>` (C++26)
+
+`std::optional<T&>` holds a pointer-like reference, not a `T`. It does not extend lifetime and it does not allocate.
+
+* Use it when a function either returns an existing object or "none" (`optional<Player&> find(Id)`). Do not return `optional<T>` by copy just to express absence of an existing object.
+* Do not use it for ownership. Ownership stays `unique_ptr` / `shared_ptr` ([03_memory_management.md](03_memory_management.md)).
+* Do not store the engaged reference past the referent's lifetime. Check the toolchain's `optional<T&>` assignment semantics before assuming it assigns through the referent or rebinds; do not invent either behavior.
+* Gate it. Fallback: `T*` for a nullable observer, or `optional<T>` when the callee must own a copy.
+
+## 7. Polymorphic values (`std::indirect`, `std::polymorphic`, C++26)
+
+* **`std::indirect<T>`:** Value semantics around a heap `T`. Copy copies the `T`. Use it when a member must be heap-allocated (incomplete type, large object, stable address) but the enclosing class should still copy and compare by value. It replaces a `unique_ptr<T>` that is only there to give value-like copying.
+* **`std::polymorphic<Base>`:** Same, with a copyable heap object whose dynamic type may differ. Copy preserves the dynamic type. Use it instead of `unique_ptr<Base>` plus a hand-written virtual `clone()` when the type must be a value in a container.
+* Neither is a substitute for `variant` when the set of alternatives is closed and small. `variant` stays stack-allocated.
+* Gate both. Fallback: `unique_ptr` plus an explicit clone, or `variant`.
+
+## 8. When *Not* to Chain
 * If a step in the pipeline needs to branch on more than one independent condition (not just presence/absence or success/error), a monadic chain becomes harder to read than a guard-clause function. Extract the branch into a well-named `constexpr` helper instead of forcing a 4-way `and_then`/`or_else` chain.
 * Hot loops calling `and_then`/`transform` with capturing lambdas can incur extra move/copy construction versus a manual branch; profile before rejecting the manual branch in that specific hot path (see [10_performance_and_dod.md](10_performance_and_dod.md)).
-
----
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. Each stage of a monadic chain must be a descriptively named function or a short lambda whose intent is self-evident.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Prefer free functions or `const` member functions as chain steps. Return values from every `optional`/`expected`-returning function must be rigorously checked using `[[nodiscard]]`.

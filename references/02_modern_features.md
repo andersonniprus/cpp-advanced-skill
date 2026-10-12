@@ -21,6 +21,8 @@ Follow a disciplined "Almost Always Auto" (AAA) approach, prioritizing readabili
 * **Concepts (C++20):** Mandatory for all template constraints. Replace generic `typename T` with explicit Concepts (e.g., `std::integral auto`, `std::ranges::range auto`) to provide immediate, readable compiler errors. Do not use legacy `std::enable_if` (SFINAE) under any circumstances.
 * **`if constexpr` (C++17):** Use for static branching inside templates. Discard invalid branches at compile-time to simplify logic and avoid compilation errors on unused branches.
 * **Pack Indexing (C++26):** Use `pack...[index]` to access a single element of a template or function parameter pack directly (`Ts...[0]`, `args...[N]`). This replaces recursive template metaprogramming or `std::index_sequence`/`std::tuple_element` gymnastics that existed solely to extract the Nth pack element. Gate behind confirmed C++26 toolchain support; fall back to `std::tuple_element_t<N, std::tuple<Ts...>>` otherwise.
+* **Structured bindings that introduce a pack (C++26):** A binding may end in `...` so the tail of a tuple-like object becomes a pack (`auto [head, tail...] = tuple;`). Use this instead of `std::apply` plus an index sequence when only the tail is forwarded. Same gating rule as pack indexing.
+* **`#embed` (C++26):** Embed a binary file as a compile-time integer sequence (`#embed "table.bin"`) instead of a Python/xxd-generated `unsigned char` array. Gate it; fall back to a `constexpr std::array<std::byte, N>` produced by the build. Do not parse the same bytes from disk at startup when the file is a build input.
 
 ## 4. Object Orientation & "Deducing this" (C++23)
 * **Explicit Object Parameters:** In C++23, utilize Deducing `this` to dramatically simplify class design and template hierarchies.
@@ -35,15 +37,22 @@ Follow a disciplined "Almost Always Auto" (AAA) approach, prioritizing readabili
 * **What `bit_cast` Does Not License:** Producing a pointer/reference value via `bit_cast` and then dereferencing it as an unrelated type is still governed by strict aliasing — `bit_cast` legalizes the *value copy*, not arbitrary reinterpretation through the resulting pointer. Never use it to punch through a class hierarchy or reinterpret an opaque handle as a different pointer type; use it strictly for value-to-value bit reinterpretation between trivially copyable types.
 * **Static Assertions:** In C++23, use `static_assert(false, "Error");` directly inside `if constexpr` blocks. Do not implement or use legacy `AlwaysFalse` template hacks.
 
-## 6. Formatting & I/O Strictness (The `<iostream>` Ban)
+## 6. Callables (owning vs non-owning)
+
+Pick the cheapest type that matches the lifetime. Do not default to `std::function`.
+
+| Need | Type |
+|---|---|
+| Non-owning, caller keeps the target alive for the call | `std::function_ref<Sig>` (C++26, `<functional>`). No allocation. |
+| Owning, move-only (lambda with `unique_ptr`) | `std::move_only_function<Sig>` (C++23) |
+| Owning, copyable, type-erased | `std::copyable_function<Sig>` (C++26). Prefer it over `std::function` when the toolchain has it |
+| One concrete target, header can see the type | Template or `auto` parameter. No type erasure |
+
+`function_ref` does not extend the target's lifetime. A `function_ref` stored past the callable it points at is a dangling call. Gate `function_ref` and `copyable_function`; fall back to a template parameter or `move_only_function` / `std::function`.
+
+## 7. Formatting & I/O Strictness (The `<iostream>` Ban)
 * **Strictly Forbid `<iostream>`:** The inclusion of `<iostream>` and the use of `std::cout`, `std::cin`, or `std::endl` are absolutely prohibited. They severely bloat the compiled binary size due to locale overhead and drastically degrade runtime execution performance.
 * **Modern Formatting:** For string formatting and output, exclusively use C++20 `<format>` (e.g., `std::format`) or C++23 `<print>` (e.g., `std::println`).
 * **Production Logging:** For runtime or diagnostic logging, never use standard streams. Rely on raw memory buffers, memory-mapped files, or specialized fast asynchronous loggers designed for low-latency environments.
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. The intent must be self-evident through the use of standard modern paradigms (e.g., `if constexpr`, `consteval`).
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Methods that do not modify state must be explicitly marked `const`. Check return values rigorously using `[[nodiscard]]`.

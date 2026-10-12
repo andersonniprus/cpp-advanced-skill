@@ -70,16 +70,38 @@ Optimizing resource transfers without expensive deep copies.
 * **Polymorphic Memory Resources (C++17):** For containers inside hot loops, you must utilize `std::pmr::vector`, `std::pmr::string`, or other `std::pmr` counterparts.
 * **Stack-Backed Arenas:** You must bind these PMR containers to a `std::pmr::monotonic_buffer_resource` backed by a stack-allocated `std::array` buffer (or a pre-allocated heap arena). This guarantees mathematically zero heap allocations and absolute CPU cache locality during the loop's execution.
 
-## 8. Stable-Pointer Pooling (`std::hive`, C++26)
+## 8. Fixed-capacity storage (`std::inplace_vector`, C++26)
+
+* **When:** A sequence whose length changes, whose capacity is a compile-time `N`, and whose bytes must live inside the object (no heap, freestanding, or the object is serialized as a value). Header `<inplace_vector>`. `capacity()` is `static constexpr` and equals `N`.
+* **Not `std::array`:** `array` is always size `N`. `inplace_vector` has a runtime `size()` from 0 to `N`.
+* **Not `pmr::vector`:** PMR is stack-first with a heap fallback when the arena is exhausted. `inplace_vector` has no fallback; `push_back` past `N` throws, and `try_push_back` / `try_emplace_back` report failure without throwing. On freestanding, prefer the `try_*` family.
+* **Trivial copy:** If `T` is trivially copyable, or `N == 0`, `inplace_vector<T, N>` is trivially copyable. Prefer that over a hand-rolled size-plus-buffer struct.
+* **Gating:** `__cpp_lib_inplace_vector`. Fallback: `std::array<std::optional<T>, N>` plus an explicit size, or `pmr::vector` when a heap fallback is acceptable.
+
+## 9. Container choice
+
+| Shape | Use |
+|---|---|
+| Fixed size, all slots live | `std::array<T, N>` |
+| Runtime size, contiguous, heap allowed | `std::vector` |
+| Same, hot loop, arena already exists | `std::pmr::vector` on `monotonic_buffer_resource` |
+| Runtime size, hard cap `N`, no allocation | `std::inplace_vector<T, N>` |
+| Insert/erase, pointers to other elements must stay valid | `std::hive` |
+| Non-owning window | `std::span` |
+
+## 10. Trivial relocation (C++26)
+
+A type is trivially relocatable when moving it to raw storage and ending the source lifetime is equivalent to `memcpy` of the object representation (no side effects in the move constructor or destructor). `std::vector` growth and custom arenas may then relocate with `std::trivially_relocate` instead of move-construct plus destroy.
+
+* Opt in only with the standard trait (`std::is_trivially_relocatable` / the `trivially_relocatable_if_eligible` annotation as provided by the toolchain). Do not `memcpy` a type that merely looks POD.
+* Types that register `this` (intrusive nodes, pointers back to self) are not trivially relocatable.
+* Gate the trait and the algorithm. Fallback: ordinary move construction and destruction.
+* A hand-rolled "relocate by memcpy" helper is a reinvention once the standard algorithm exists. Flag it in an over-engineering audit.
+
+## 11. Stable-Pointer Pooling (`std::hive`, C++26)
 * **Architectural Rule:** When a design needs to insert and erase elements frequently from a large pool while keeping existing pointers/references/iterators to *other* elements stable across those operations (object pools, entity-component systems, particle systems), reach for `std::hive` before hand-rolling a bucket/free-list container.
 * **Modern C++ Implementation:** `std::hive<T>` provides amortized O(1) insertion and erasure without relocating surviving elements, using an internal skipfield to skip erased slots during iteration. Prefer it over `std::vector<std::optional<T>>` (wastes space and still risks reference invalidation on growth) or a hand-written free-list allocator.
 * **Gating:** `std::hive` is a C++26 addition; confirm toolchain support (`__cpp_lib_hive` via `<version>`) before emitting it, and fall back to a documented `std::deque`-backed free-list pool otherwise.
 * **Reinvention Check:** A custom "stable object pool" class with a manual free-list and skip-erased-slots iteration is exactly what `std::hive` replaces — flag it during an Over-Engineering Audit ([18_over_engineering_audit.md](18_over_engineering_audit.md) §3) once C++26 is available.
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. The intent must be self-evident through the explicit use of `std::make_unique`, `std::move`, and RAII wrappers.
-2. **English Exclusivity:** All code constructs, naming conventions, and logging must be in English.
-3. **Purity:** Methods that do not modify state must be explicitly marked `const`. Functions that allocate and return memory must be rigorously checked using `[[nodiscard]]`.

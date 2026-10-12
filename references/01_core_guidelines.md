@@ -29,9 +29,3 @@ This document dictates the absolute baseline rules for physical code structure, 
 * **`std::optional`:** Use `std::optional<T>` only when the absence of a value is a normal, expected state, and the specific reason for the absence (the error code) is completely irrelevant to the caller.
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** As stated above, `.cpp` files must contain zero comments. The intent must be self-evident through clean architecture, early returns, and precise naming.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Methods that do not modify state must be explicitly marked `const`. Check return values rigorously using `[[nodiscard]]`. Never ignore an error state.

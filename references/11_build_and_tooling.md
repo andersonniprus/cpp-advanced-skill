@@ -32,9 +32,3 @@ When generating build scripts for the Windows/MSVC toolchain, you must aggressiv
 * **Vcpkg/Conan Compatibility:** Do not hardcode absolute paths to libraries on the local machine. Assume dependencies will be resolved via a package manager toolchain file. Use `find_package(Name REQUIRED)` and link against the imported modern namespace targets (e.g., `target_link_libraries(MyTarget PRIVATE fmt::fmt)`).
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** Generated `CMakeLists.txt` or `.cmake` files must contain zero comments. The structure of the targets and explicit visibility scopes must be entirely self-documenting.
-2. **English Exclusivity:** All target names, variables, and output strings within the build system must be natively written in English.
-3. **Purity:** Build scripts must not execute external destructive scripts (`execute_process`) during the configuration phase unless strictly required for fetching critical dependencies. Treat the build environment as a secure sandbox.

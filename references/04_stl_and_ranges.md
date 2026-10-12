@@ -25,14 +25,9 @@ This document dictates the strict use of the Standard Template Library (STL) in 
   * `std::views::adjacent<N>` (and `adjacent_transform<N>`) replace manual sliding-window index arithmetic (`v[i]`, `v[i+1]`) for windowed comparisons/reductions.
   * `std::views::chunk`/`chunk_by` replace manual batch-splitting loops.
 * **`std::ranges::to<Container>()` (C++23):** Materializes a view pipeline into a concrete container in a single expression: `auto result = data | std::views::filter(isValid) | std::ranges::to<std::vector>();`. Never write a manual `std::copy`/push_back loop to collect a view's results — `ranges::to` is the direct replacement.
+* **`std::views::concat` (C++26):** Lazy concatenation of ranges of the same reference type. Gate it. Fallback: a materializing loop into one container, then a view over that container. Do not write a custom `concat_view`.
 
 ## 5. Compile-Time Algorithms
 * **`constexpr` STL:** In C++20 and above, most STL algorithms and containers (`std::vector`, `std::string`) are `constexpr` friendly. If the input data is known at compile-time, you must wrap the algorithmic pipeline in a `constexpr` or `consteval` function to execute the logic entirely during compilation.
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files or inline lambda bodies must contain strictly zero comments. The intent must be self-evident through the declarative nature of the view pipelines, descriptive variables, and projections.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Methods that process ranges but do not modify internal state must be explicitly marked `const`. Return values from all range pipelines must be rigidly checked using `[[nodiscard]]`.q

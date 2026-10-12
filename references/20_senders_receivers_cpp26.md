@@ -10,6 +10,7 @@ This document dictates the architectural mandates for using the C++26 `std::exec
 * **Receiver:** The completion callback for a sender, with three channels: `set_value`, `set_error`, `set_stopped` — corresponding to success, failure, and cancellation.
 * **Operation State:** Produced by `execution::connect(sender, receiver)`; represents the concrete, non-movable resource for one execution. `execution::start` begins it.
 * **Scheduler:** A lightweight handle to an execution context (thread pool, GPU queue, single-threaded event loop) obtained via `execution::schedule(scheduler)`, used to place work on a specific context.
+* **Parallel scheduler:** Bulk parallel work uses the standard parallel scheduler that guarantees forward progress, not a hand-rolled pool of detached `jthread`s. A context that does not guarantee forward progress can deadlock a pipeline that waits on its own children. Name the concrete scheduler type the toolchain ships; do not invent `execution::parallel_scheduler` if that identifier is absent. Fallback: `std::jthread` plus `std::barrier`/`std::latch`.
 
 ## 3. Composable Algorithms
 * **`execution::then(sender, f)`:** Runs `f` on the value(s) produced by `sender`'s success channel — the async equivalent of `std::optional::transform` ([14_optional_and_monadic_ops.md](14_optional_and_monadic_ops.md)).
@@ -34,11 +35,3 @@ auto result = execution::sync_wait(std::move(pipeline));
 
 ## 5. When to Stay on `std::jthread`
 * A single, simple background loop bound to RAII lifetime with cooperative cancellation via `stop_token` ([09_concurrency_and_threading.md](09_concurrency_and_threading.md) §1) remains the correct default. Reach for `std::execution` specifically when the work is a *pipeline* of dependent async steps, needs to run across heterogeneous schedulers (CPU pool, GPU queue), or requires `when_all`-style fan-out/fan-in — not as a blanket replacement for every thread in the codebase.
-
----
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. Each pipeline stage must be a descriptively named function or short lambda passed to `then`/`let_value`.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Prefer stages that are free functions or `const` member functions with no hidden shared-state mutation; any stage that must mutate shared state still requires the synchronization discipline of [09_concurrency_and_threading.md](09_concurrency_and_threading.md).

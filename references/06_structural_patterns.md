@@ -78,9 +78,3 @@ Provides a placeholder for another object to control access, delay initializatio
   * **Protection Proxy:** Perform security/authorization checks and return early if the check fails before delegating to the Real Subject.
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **Rule of Zero / Five:** Any structural class managing resources directly (like Pimpl) must explicitly define or delete the copy/move constructors and assignment operators to prevent shallow copy bugs.
-2. **Comments Directive:** The `.cpp` files must contain zero comments. The AI must rely on descriptive naming, early returns, and modern syntax (like `auto const&`) to make the structural relationships obvious.
-3. **Language:** All variable names, class names, strings, and structures must be natively written in English.

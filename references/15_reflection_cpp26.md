@@ -33,17 +33,21 @@ constexpr auto structToTuple(const T& value) {
 }
 ```
 
-## 5. Interop With Core Mandates
+## 5. Expansion statements (C++26)
+
+`template for` iterates a pack or a compile-time range at instantiation time, without an `index_sequence` lambda. Use it to walk `nonstatic_data_members_of` when the body is a statement, not an expression that must expand inside `make_tuple(...)`.
+
+```cpp
+template for (constexpr auto member : std::meta::nonstatic_data_members_of(^^T)) {
+    hash = mix(hash, value.[: member :]);
+}
+```
+
+Pack indexing and structured bindings that introduce a pack live in [02_modern_features.md](02_modern_features.md). Do not reintroduce recursive pack templates for a single index. Gate `template for` with the same reflection macro; fallback is the `index_sequence` pattern in §4.
+
+## 6. Interop With Core Mandates
 * Reflection-generated accessors are not exempt from the skill's baseline rules: mark generated read-only functions `const`, mark generating factory functions `[[nodiscard]]`, and route generated fallible paths through `std::expected` rather than exceptions.
 * Prefer reflection over `consteval`-based string-hashing metaprogramming ([08_security_and_production.md](08_security_and_production.md)) only for structural introspection tasks (field iteration, enum mapping); keep the existing `consteval` FNV-1a/MurmurHash3 hashing approach for API-hashing and Anti-RE use cases, which are orthogonal to reflection.
 
-## 6. Accuracy Discipline
-* Never fabricate `std::meta` convenience functions beyond the documented P2996 core (`members_of`, `nonstatic_data_members_of`, `enumerators_of`, `identifier_of`, `type_of`, `template_of`, `access_context`). If the active compiler's `<meta>` surface diverges, prefer the documented core primitives and note the discrepancy in the Doxygen `@brief` rather than inventing an API.
-
----
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. Reflection-driven loops must be self-evident through descriptive lambda names and clear splice targets.
-2. **English Exclusivity:** All code constructs, variables, and literal strings must be natively written in English.
-3. **Purity:** Reflection-based introspection functions must be `constexpr`/`consteval` and marked `const`/`[[nodiscard]]` where they do not mutate state and return newly built data.
+## 7. Accuracy Discipline
+* Never fabricate `std::meta` convenience functions beyond the documented P2996 core (`members_of`, `nonstatic_data_members_of`, `enumerators_of`, `identifier_of`, `type_of`, `template_of`, `access_context`). If the active compiler's `<meta>` surface diverges, prefer the documented core primitives and note the discrepancy in the Doxygen `@brief` rather than inventing an API. Do not invent the grammar of `template for` beyond the statement form above.

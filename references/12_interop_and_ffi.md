@@ -21,9 +21,3 @@ This document dictates the architectural mandates for exposing C++ functionality
 * **Calling Conventions:** Explicitly define the calling convention for exported functions (usually `__stdcall` or `__cdecl`) to prevent stack corruption when invoked via P/Invoke (C#) or `ctypes` (Python).
 
 ---
-
-## Code Generation Directives for AI Models
-
-1. **No Implementation Comments:** `.cpp` files must contain zero comments. Exception boundaries and handle casting must be self-evident through their strict, repetitive structure.
-2. **English Exclusivity:** All exported function names, internal code constructs, and variables must be natively written in English.
-3. **Purity:** Exported functions cannot use `[[nodiscard]]` if the external language lacks the capability to enforce it, but internal C++ core functions must retain strict purity.
